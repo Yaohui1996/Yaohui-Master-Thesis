@@ -1,21 +1,13 @@
 #ifndef YAOHUI_MASTER_THESIS_MISSION_HPP
 #define YAOHUI_MASTER_THESIS_MISSION_HPP
 
-#include <vector>
-
 #include "Interval.hpp"
 #include "Station.hpp"
-#include <climits>
-#include <cstdint>
+#include <vector>
 
 namespace yaohui {
 
 class Mission {
-private:
-  using station_id_t = int32_t; // 车站索引类型
-  using mission_id_t = int32_t; // 运输任务(运行线)索引类型
-  using second_t = int32_t;     // "秒"类型
-
 private:
   mission_id_t mission_id_ = INT32_MIN;  // 运行线id
   bool is_down_direction_ = true;        // 运行线方向
@@ -24,40 +16,36 @@ private:
 
 public:
   /**
-   * @brief Construct a new Mission object
-   *
-   * @param id mission id
-   * @param stations 运行线经过的车站序列
-   * @param intervals 运行线经过的区间序列
-   */
-  //  Mission(mission_id_t id, stations_seq_t stations,
-  //          std::vector<Interval> intervals);
-
-  /**
    *
    * @param id mission id
    * @param is_down 是否是下行运输任务
    * @param stations 运行线经过的车站序列
-   * @param intervals 运行线经过的区间序列
+   * @param intervals 运行线经过的区间序列g
    */
   Mission(mission_id_t id, bool is_down, std::vector<Station> stations,
-          std::vector<Interval> intervals);
-  Mission() = default;
+          std::vector<Interval> intervals)
+      : mission_id_(id), is_down_direction_(is_down),
+        stations_(std::move(stations)), intervals_(std::move(intervals)) {}
+  Mission() = delete;
 
 public:
-  // 只读权限获取数据成员
-  mission_id_t id() const;
-  bool is_down_direction() const;
-  const std::vector<Station> &stations() const;
-  const std::vector<Interval> &intervals() const;
+  mission_id_t id() const { return mission_id_; }
+  bool is_down_direction() const { return is_down_direction_; }
+  const std::vector<Station> &stations() const { return stations_; }
+  const std::vector<Interval> &intervals() const { return intervals_; }
 
-public:
-  std::vector<std::pair<station_id_t, second_t>> plot_info_mission() const;
-
-  //    std::vector<joule_t> energy_produced_distribution() {
-  //
-  //    }
-  //    std::vector<std::pair<joule_t, supply_arm_id_t>>
+  /**
+   *
+   * @return 用于绘制运行图的数据结构
+   */
+  ms_plot_data_t plot_info_mission() const {
+    ms_plot_data_t mission_info_vec;
+    for (const Station &s : this->stations_) {
+      mission_info_vec.emplace_back(s.station_id(), s.arrive_time());
+      mission_info_vec.emplace_back(s.station_id(), s.departure_time());
+    }
+    return std::move(mission_info_vec);
+  }
 };
 
 } // namespace yaohui

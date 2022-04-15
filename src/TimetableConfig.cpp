@@ -1,46 +1,114 @@
 #include "TimetableConfig.hpp"
 #include <chrono>
-#include <map>
 #include <random>
-#include <utility>
 #include <vector>
 
 using namespace std;
 
 namespace yaohui {
+const departure_T_t &TimetableConfig::departure_T() const {
+  return departure_T_;
+}
+const departure_T_t &TimetableConfig::departure_T_min() const {
+  return departure_T_min_;
+}
+const departure_T_t &TimetableConfig::departure_T_max() const {
+  return departure_T_max_;
+}
+const stop_duration_t &TimetableConfig::stop_duration() const {
+  return stop_duration_;
+}
+const stop_duration_t &TimetableConfig::stop_duration_min() const {
+  return stop_duration_min_;
+}
+const stop_duration_t &TimetableConfig::stop_duration_max() const {
+  return stop_duration_max_;
+}
 
-TimetableConfig::second_t TimetableConfig::first_train_time() const { return first_train_time_; }
-TimetableConfig::second_t TimetableConfig::last_train_time() const { return last_train_time_; }
-TimetableConfig::second_t TimetableConfig::produce_duration() const { return produce_duration_; }
-TimetableConfig::second_t TimetableConfig::consume_duration() const { return consume_duration_; }
+second_t TimetableConfig::first_train_time() const { return first_train_time_; }
+second_t TimetableConfig::last_train_time() const { return last_train_time_; }
 
-const std::vector<TimetableConfig::station_id_t> &TimetableConfig::stations() const {
+second_t TimetableConfig::produce_duration() const { return produce_duration_; }
+second_t TimetableConfig::consume_duration() const { return consume_duration_; }
+const std::vector<station_id_t> &TimetableConfig::stations() const {
   return stations_;
 }
-const std::map<TimetableConfig::station_id_t, TimetableConfig::supply_arm_id_t> &
+const std::map<station_id_t, supply_arm_id_t> &
 TimetableConfig::supply_arm() const {
   return supply_arm_;
 }
-const std::map<TimetableConfig::interval_id_t, TimetableConfig::second_t> &
+const std::map<interval_id_t, second_t> &
 TimetableConfig::travel_duration() const {
   return travel_duration_;
 }
-const std::map<TimetableConfig::station_id_t, TimetableConfig::second_t> &TimetableConfig::stop_duration() const {
-  return stop_duration_;
+const std::vector<kilojoule_t> &TimetableConfig::consume_vec() const {
+  return consume_vec_;
 }
-const std::map<std::pair<TimetableConfig::second_t, TimetableConfig::second_t>, TimetableConfig::second_t> &
-TimetableConfig::departure_T() const {
-  return departure_T_;
+const std::vector<kilojoule_t> &TimetableConfig::produce_vec() const {
+  return produce_vec_;
 }
 
-TimetableConfig::first_departure_time_t &
-TimetableConfig::make_basic_departure_time_sequence(
-    TimetableConfig::first_departure_time_t &basic_departure_time_seq) {
-  //  basic_departure_time_seq.clear(); // 清理数据成员
-  // 保存结果
+// 运行图中下行运行线的数目
+size_t TimetableConfig::down_missions_cnt() const {
+  assert(down_departure_time_vec_.size() == down_stop_duration_vec_.size());
+  return down_departure_time_vec_.size();
+}
+
+// 运行图中上行运行线的数目
+size_t TimetableConfig::up_missions_cnt() const {
+  assert(up_departure_time_vec_.size() == up_stop_duration_vec_.size());
+  return up_departure_time_vec_.size();
+}
+
+// 运行图中运行线的数目
+size_t TimetableConfig::missions_cnt() const {
+  return down_missions_cnt() + up_missions_cnt();
+}
+
+// 下行发车时刻序列
+const first_departure_time_t &TimetableConfig::down_departure_time_vec() const {
+  return down_departure_time_vec_;
+}
+first_departure_time_t &TimetableConfig::down_departure_time_vec() {
+  return down_departure_time_vec_;
+}
+// 上行发车时刻序列
+const first_departure_time_t &TimetableConfig::up_departure_time_vec() const {
+  return up_departure_time_vec_;
+}
+first_departure_time_t &TimetableConfig::up_departure_time_vec() {
+  return up_departure_time_vec_;
+}
+
+// 各条下行运行线的停站时长
+const std::vector<std::map<station_id_t, second_t>> &
+TimetableConfig::down_stop_duration_vec() const {
+  return down_stop_duration_vec_;
+}
+std::vector<std::map<station_id_t, second_t>> &
+TimetableConfig::down_stop_duration_vec() {
+  return down_stop_duration_vec_;
+}
+// 各条上行运行线的停站时长
+const std::vector<std::map<station_id_t, second_t>> &
+TimetableConfig::up_stop_duration_vec() const {
+  return up_stop_duration_vec_;
+}
+std::vector<std::map<station_id_t, second_t>> &
+TimetableConfig::up_stop_duration_vec() {
+  return up_stop_duration_vec_;
+}
+
+TimetableConfig::TimetableConfig() {
+  init_basic_departure_time_sequence();
+  init_basic_stop_duration(down_departure_time_vec_.size());
+}
+
+void TimetableConfig::init_basic_departure_time_sequence() {
+  // 下行
   for (second_t curr_time = first_train_time_; curr_time < last_train_time_;) {
     // 将当前遍历到的时刻加入基本发车时刻序列
-    basic_departure_time_seq.push_back(curr_time);
+    down_departure_time_vec_.push_back(curr_time);
     // 遍历departure_T寻找当前循环的发车间隔
     second_t curr_departure_T;
     for (const auto &dt : departure_T_) {
@@ -51,32 +119,32 @@ TimetableConfig::make_basic_departure_time_sequence(
     }
     curr_time += curr_departure_T;
   }
-  return basic_departure_time_seq;
+
+  // 上下行对开
+  up_departure_time_vec_ = down_departure_time_vec_;
 }
 
-TimetableConfig::each_stop_duration_t &
-TimetableConfig::make_basic_stop_duration(
-    TimetableConfig::each_stop_duration_t &stop_duration_vec,
-    size_t missions_cnt) {
-  stop_duration_vec.reserve(missions_cnt); // 预先分配内存
-  for (auto i = 0; i != missions_cnt; ++i) {
-    stop_duration_vec.emplace_back(stop_duration_); // 用map构造map
-  }
-  return stop_duration_vec;
+void TimetableConfig::init_basic_stop_duration(size_t missions_cnt) {
+  down_stop_duration_vec_.reserve(missions_cnt);
+  // 用map构造map
+  fill_n(back_inserter(down_stop_duration_vec_), missions_cnt, stop_duration_);
+
+  // 上下行对开
+  up_stop_duration_vec_ = down_stop_duration_vec_;
 }
 
 void TimetableConfig::show() const {
   cout << ">>>> Down Standard First Departure Time <<<<" << endl;
-  for (size_t i = 0; i != down_basic_departure_time_sequence_.size(); ++i) {
+  for (size_t i = 0; i != down_departure_time_vec_.size(); ++i) {
     cout << "[down] [index=" << i << "] [first departure time=["
-         << down_basic_departure_time_sequence_.at(i) << "]" << endl;
+         << down_departure_time_vec_.at(i) << "]" << endl;
   }
   cout << "<<<< Down Standard First Departure Time >>>>" << endl;
 
   cout << ">>>> Up Standard First Departure Time <<<<" << endl;
-  for (size_t i = 0; i != up_basic_departure_time_sequence_.size(); ++i) {
+  for (size_t i = 0; i != up_departure_time_vec_.size(); ++i) {
     cout << "[up] [index=" << i << "] [first departure time=["
-         << up_basic_departure_time_sequence_.at(i) << "]" << endl;
+         << up_departure_time_vec_.at(i) << "]" << endl;
   }
   cout << "<<<< Up Standard First Departure Time >>>>" << endl;
 
@@ -125,62 +193,6 @@ void TimetableConfig::show() const {
   cout << "[first_train_time=" << first_train_time_ << "]" << endl;
   cout << "[last_train_time=" << last_train_time_ << "]" << endl;
   cout << "<<<< Other Info >>>>" << endl;
-}
-
-void TimetableConfig::random_offset_down_first_departure_time_vec(
-    second_t departure_time_offset_range) {
-  auto tp_epoch = std::chrono::system_clock::now().time_since_epoch().count();
-  static default_random_engine e(tp_epoch);
-  static uniform_int_distribution<second_t> u(-departure_time_offset_range,
-                                              departure_time_offset_range);
-  for (auto &item : down_basic_departure_time_sequence_) {
-    item += u(e); // 调整
-  }
-}
-
-void TimetableConfig::random_offset_up_first_departure_time_vec(
-    second_t departure_time_offset_range) {
-  auto tp_epoch = std::chrono::system_clock::now().time_since_epoch().count();
-  static default_random_engine e(tp_epoch);
-  static uniform_int_distribution<second_t> u(-departure_time_offset_range,
-                                              departure_time_offset_range);
-  for (auto &item : up_basic_departure_time_sequence_) {
-    item += u(e); // 调整
-  }
-}
-
-// 随机调整各条下行运行线的停站时长
-void TimetableConfig::random_offset_down_stop_duration_vec(
-    second_t stop_duration_offset_range) {
-  auto tp_epoch = std::chrono::system_clock::now().time_since_epoch().count();
-  static default_random_engine e(tp_epoch);
-  static uniform_int_distribution<second_t> u(-stop_duration_offset_range,
-                                              stop_duration_offset_range);
-
-  for (auto &item : down_stop_duration_vec_) {
-    for (auto &p : item) {
-      if (!(p.first == 0 || p.first == 15)) {
-        (p.second) += u(e); // 调整
-      }
-    }
-  }
-}
-
-// 随机调整各条上行运行线的停站时长
-void TimetableConfig::random_offset_up_stop_duration_vec(
-    second_t stop_duration_offset_range) {
-  auto tp_epoch = std::chrono::system_clock::now().time_since_epoch().count();
-  static default_random_engine e(tp_epoch);
-  static uniform_int_distribution<second_t> u(-stop_duration_offset_range,
-                                              stop_duration_offset_range);
-
-  for (auto &item : up_stop_duration_vec_) {
-    for (auto &p : item) {
-      if (!(p.first == 0 || p.first == 15)) {
-        (p.second) += u(e); // 调整
-      }
-    }
-  }
 }
 
 } // namespace yaohui

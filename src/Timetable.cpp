@@ -13,87 +13,88 @@ using namespace nlohmann;
 
 namespace yaohui {
 
-vector<Station>
-Timetable::make_down_stations_vec(size_t down_id,
-                                  const TimetableConfig &config) {
+const std::vector<Mission> &Timetable::missions() const { return missions_; }
+vector<Station> Timetable::make_down_stations_vec(size_t down_id) {
   // 第i条下行运行线的发车时刻
-  auto arrive_time = config.down_basic_departure_time_sequence().at(down_id);
+  auto arrive_time = config_.down_departure_time_vec().at(down_id);
   // 保存结果
   vector<Station> seq;
+  seq.reserve(config_.stations().size());
   // 按照下行顺序遍历每一个车站
-  for (auto iter = config.stations().cbegin(); iter != config.stations().cend();
-       ++iter) {
+  for (auto iter = config_.stations().cbegin();
+       iter != config_.stations().cend(); ++iter) {
     // 当前station id
-    const auto &curr_id = *iter;
+    station_id_t curr_id = *iter;
     // 当前车站停站时长
-    const auto &curr_stop_dur =
-        config.down_stop_duration_vec().at(down_id).at(curr_id);
+    second_t curr_stop_dur =
+        config_.down_stop_duration_vec().at(down_id).at(curr_id);
     // 当前车站离站时刻
-    const auto &de_time = arrive_time + curr_stop_dur;
+    second_t de_time = arrive_time + curr_stop_dur;
     // 当前车站所属的供电臂id
-    const auto &arm_id = config.supply_arm().at(curr_id);
+    supply_arm_id_t arm_id = config_.supply_arm().at(curr_id);
     // 进入当前车站过程中, 产能开始时刻
-    const auto &prod_beg_time = arrive_time - config.produce_duration();
+    second_t prod_beg_time = arrive_time - config_.produce_duration();
     // 离开当前车站的过程中, 用能结束时刻
-    const auto &cons_end_time = de_time + config.consume_duration();
+    second_t cons_end_time = de_time + config_.consume_duration();
     // 构造第i个station
     seq.emplace_back(curr_id, arm_id, prod_beg_time, arrive_time, de_time,
                      cons_end_time, curr_stop_dur);
     // 更新arrive_time
-    if (iter + 1 != config.stations().cend()) {
-      const auto &next_id = *(iter + 1); // 下一个station的id
-      arrive_time = de_time + config.travel_duration().at({curr_id, next_id});
+    if (iter + 1 != config_.stations().cend()) {
+      station_id_t next_id = *(iter + 1); // 下一个station的id
+      arrive_time = de_time + config_.travel_duration().at({curr_id, next_id});
     }
   }
-  return seq;
+  return std::move(seq);
 }
 
-vector<Station> Timetable::make_up_stations_vec(size_t up_id,
-                                                const TimetableConfig &config) {
+vector<Station> Timetable::make_up_stations_vec(size_t up_id) {
   // 第i条上行运行线的发车时刻
-  auto arrive_time = config.up_basic_departure_time_sequence().at(up_id);
+  second_t arrive_time = config_.up_departure_time_vec().at(up_id);
   // 保存结果
   vector<Station> seq;
+  seq.reserve(config_.stations().size());
   // 按照上行顺序遍历每一个车站
-  for (auto iter = config.stations().crbegin();
-       iter != config.stations().crend(); ++iter) {
+  for (auto iter = config_.stations().crbegin();
+       iter != config_.stations().crend(); ++iter) {
     // 当前station id
-    const auto &curr_id = *iter;
+    station_id_t curr_id = *iter;
     // 当前车站停站时长
-    const auto &curr_stop_dur =
-        config.up_stop_duration_vec().at(up_id).at(curr_id);
+    second_t curr_stop_dur =
+        config_.up_stop_duration_vec().at(up_id).at(curr_id);
     // 当前车站离站时刻
-    const auto &de_time = arrive_time + curr_stop_dur;
+    second_t de_time = arrive_time + curr_stop_dur;
     // 当前车站所属的供电臂id
-    const auto &arm_id = config.supply_arm().at(curr_id);
+    supply_arm_id_t arm_id = config_.supply_arm().at(curr_id);
     // 进入当前车站过程中, 产能开始时刻
-    const auto &prod_beg_time = arrive_time - config.produce_duration();
+    second_t prod_beg_time = arrive_time - config_.produce_duration();
     // 离开当前车站的过程中, 用能结束时刻
-    const auto &cons_end_time = de_time + config.consume_duration();
+    second_t cons_end_time = de_time + config_.consume_duration();
     // 构造第i个station
     seq.emplace_back(curr_id, arm_id, prod_beg_time, arrive_time, de_time,
                      cons_end_time, curr_stop_dur);
     // 更新arrive_time
-    if (iter + 1 != config.stations().crend()) {
-      const auto &next_id = *(iter + 1); // 下一个station的id
-      arrive_time = de_time + config.travel_duration().at({curr_id, next_id});
+    if (iter + 1 != config_.stations().crend()) {
+      station_id_t next_id = *(iter + 1); // 下一个station的id
+      arrive_time = de_time + config_.travel_duration().at({curr_id, next_id});
     }
   }
-  return seq;
+  return std::move(seq);
 }
 
 vector<Interval>
 Timetable::make_down_intervals_vec(const vector<Station> &stations_seq) {
-  return make_intervals_vec(stations_seq);
+  return std::move(make_intervals_vec(stations_seq));
 }
 
 vector<Interval>
 Timetable::make_up_intervals_vec(const vector<Station> &stations_seq) {
-  return make_intervals_vec(stations_seq);
+  return std::move(make_intervals_vec(stations_seq));
 }
 vector<Interval>
 Timetable::make_intervals_vec(const vector<Station> &stations_seq) {
   vector<Interval> seq;
+  seq.reserve(stations_seq.size());
   // for each station
   for (size_t i = 0; i != stations_seq.size() - 1; ++i) {
     const Station &front_station = stations_seq.at(i);    // 当前的station
@@ -104,160 +105,133 @@ Timetable::make_intervals_vec(const vector<Station> &stations_seq) {
         front_station.consume_end_time(), back_station.supply_arm_id(),
         back_station.produce_begin_time(), back_station.produce_end_time());
   }
-  return seq;
+  return std::move(seq);
 }
 
-Timetable::Timetable(const TimetableConfig &config) {
-  // 保存结果
-  vector<Mission> missions_vec;
-  mission_id_t mission_cnt = 0;
+Timetable::Timetable(const TimetableConfig &config) : config_(config) {
+  // 预分配内存
+  missions_.clear();
+  this->missions_.reserve(config_.down_missions_cnt() +
+                          config_.up_missions_cnt());
+  mission_id_t mission_cnt = 0; // 运行线id
+
   // 生成下行运行线
-  vector<Mission> down_missions;
-  //预分配内存
-  down_missions.reserve(config.down_missions_cnt() + config.up_missions_cnt());
-  for (size_t i = 0; i != config.down_missions_cnt(); ++i) {
+  for (size_t i = 0; i != config_.down_missions_cnt(); ++i) {
     // 制作第i条下行运行线的vector<Station>序列
-    vector<Station> station_seq = make_down_stations_vec(i, config);
+    vector<Station> station_seq = make_down_stations_vec(i);
     // 制作第i条下行运行线的vector<Interval>序列
     vector<Interval> interval_seq = make_down_intervals_vec(station_seq);
-    down_missions.emplace_back(mission_cnt++, true, station_seq, interval_seq);
+    this->missions_.emplace_back(mission_cnt++, true, std::move(station_seq),
+                                 std::move(interval_seq));
   }
 
   // 生成上行运行线
-  vector<Mission> up_missions;
-  up_missions.reserve(config.up_missions_cnt()); // 预分配内存
-  for (size_t i = 0; i != config.up_missions_cnt(); ++i) {
+  for (size_t i = 0; i != config_.up_missions_cnt(); ++i) {
     // 制作第i条上行运行线的vector<Station>序列
-    vector<Station> station_seq = make_up_stations_vec(i, config);
+    vector<Station> station_seq = make_up_stations_vec(i);
     // 制作第i条上行运行线的vector<Interval>序列
     vector<Interval> interval_seq = make_up_intervals_vec(station_seq);
-    up_missions.emplace_back(mission_cnt++, false, station_seq, interval_seq);
+    this->missions_.emplace_back(mission_cnt++, false, std::move(station_seq),
+                                 std::move(interval_seq));
   }
-
-  // 组合上下行数据
-  down_missions.insert(down_missions.end(), up_missions.begin(),
-                       up_missions.end());
-  // timetable构造结束
-  missions_ = std::move(down_missions);
 }
 
-Timetable::Timetable(timetable_id_t id, std::vector<Mission> missions)
-    : timetable_id_(id), missions_(std::move(missions)) {}
-
-const vector<Mission> &Timetable::missions() const { return missions_; }
-
-Timetable::plot_data_t Timetable::get_plot_data() const {
-  Timetable::plot_data_t plot_data;
+tb_plot_data_t Timetable::get_plot_data() const {
+  tb_plot_data_t plot_data;
   for (const Mission &m : missions_) {
     plot_data.emplace_back(m.plot_info_mission());
   }
   return plot_data;
 }
 
-std::map<Timetable::supply_arm_id_t,
-         std::vector<std::pair<Timetable::second_t, Timetable::second_t>>>
-Timetable::energy_produce_distribution_helper() const {
-  // 供电臂用能map
-  // key: 供电臂id
-  // value: 供电臂id对应的用能区间构成的vector
-  map<supply_arm_id_t, vector<pair<second_t, second_t>>> produce_map;
-  for (const auto &mission : missions_) {
-    for (const auto &interval : mission.intervals()) {
-      auto finder = produce_map.find(interval.produce_supply_arm_id());
-      if (finder == produce_map.end()) {
-        produce_map.insert(std::make_pair(
-            interval.produce_supply_arm_id(),
-            std::vector<std::pair<second_t, second_t>>{std::make_pair(
-                interval.produce_begin_time(), interval.produce_end_time())}));
-      } else {
-        finder->second.emplace_back(interval.produce_begin_time(),
-                                    interval.produce_end_time());
-      }
-    }
-  }
-  return std::move(produce_map);
-}
-
-map<Timetable::supply_arm_id_t,
-    vector<pair<Timetable::second_t, Timetable::second_t>>>
-Timetable::energy_consume_distribution_helper() const {
-  // 供电臂用能map
-  // key: 供电臂id
-  // value: 供电臂id对应的用能区间构成的vector
-  map<supply_arm_id_t, vector<pair<second_t, second_t>>> consume_map;
-  for (const auto &mission : missions_) {
-    for (const auto &interval : mission.intervals()) {
+std::pair<energy_map_t, energy_map_t>
+Timetable::energy_exchange_duration() const {
+  energy_map_t consume_map;
+  energy_map_t produce_map;
+  for (const Mission &mission : missions_) {
+    for (const Interval &interval : mission.intervals()) {
       // 用能阶段
-      auto finder = consume_map.find(interval.consume_supply_arm_id());
-      if (finder == consume_map.end()) {
+      auto finder_c = consume_map.find(interval.consume_supply_arm_id());
+      if (finder_c == consume_map.end()) {
         consume_map.insert(std::make_pair(
             interval.consume_supply_arm_id(),
             std::vector<std::pair<second_t, second_t>>{std::make_pair(
                 interval.consume_beg_time(), interval.consume_end_time())}));
       } else {
-        finder->second.emplace_back(interval.consume_beg_time(),
-                                    interval.consume_end_time());
+        finder_c->second.emplace_back(interval.consume_beg_time(),
+                                      interval.consume_end_time());
+      }
+      // 产能阶段
+      auto finder_p = produce_map.find(interval.produce_supply_arm_id());
+      if (finder_p == produce_map.end()) {
+        produce_map.insert(std::make_pair(
+            interval.produce_supply_arm_id(),
+            std::vector<std::pair<second_t, second_t>>{std::make_pair(
+                interval.produce_begin_time(), interval.produce_end_time())}));
+      } else {
+        finder_p->second.emplace_back(interval.produce_begin_time(),
+                                      interval.produce_end_time());
       }
     }
   }
-  return std::move(consume_map);
+  return std::make_pair(std::move(consume_map), std::move(produce_map));
 }
 
-// 用能分布
-map<Timetable::supply_arm_id_t, vector<Timetable::joule_t>>
-Timetable::energy_consume_distribution() const {
-  auto consume_map = energy_consume_distribution_helper();
-  map<supply_arm_id_t, vector<joule_t>>
-      consume_distribution; // 各个供电臂一天内的用能分布
-  for (const auto &item : consume_map) {
+// 各个供电臂的产能分布和各个供电臂的用能分布
+std::pair<energy_distribution_t, energy_distribution_t>
+Timetable::energy_distribution() const {
+  auto energy_exchange_duration = this->energy_exchange_duration();
+  const auto &consume_map = energy_exchange_duration.first;
+  const auto &produce_map = energy_exchange_duration.second;
+
+  // 各个供电臂一个运行图周期内的用能分布
+  map<supply_arm_id_t, vector<joule_t>> consume_distribution;
+  for (const auto &p : consume_map) {
+    supply_arm_id_t curr_arm_id = p.first;
     // 首先插入一个初始化k-v对
     consume_distribution.insert(
-        make_pair(item.first, vector<joule_t>(129600, 0.0)));
-    auto pointer = consume_distribution.find(item.first);
+        make_pair(curr_arm_id, vector<joule_t>(100000, 0.0)));
+    auto finder = consume_distribution.find(curr_arm_id);
     // 然后开始累计能量
-    for (const auto &beg_end_time_pair : item.second) {
-      for (size_t i = beg_end_time_pair.first; i != beg_end_time_pair.second;
-           ++i) {
-        size_t curr_index = i - beg_end_time_pair.first;
-        (pointer->second).at(i) +=
-            consume_vec_.at(curr_index); // 增加consume_vec_.at(curr_index)千焦
-        //        (pointer->second).at(i) += 1.0; // 能量增加1.0焦耳
+    for (const auto &beg_end_time_pair : p.second) {
+      second_t beg_time = beg_end_time_pair.first;
+      second_t end_time = beg_end_time_pair.second;
+      for (size_t i = beg_time; i != end_time; ++i) {
+        size_t curr_index = i - beg_time;
+        // 增加consume_vec_.at(curr_index)千焦
+        (finder->second).at(i) += config_.consume_vec().at(curr_index);
       }
     }
   }
-  return std::move(consume_distribution);
-}
 
-// 产能分布
-map<Timetable::supply_arm_id_t, vector<Timetable::joule_t>>
-Timetable::energy_produce_distribution() const {
-  auto produce_map = energy_produce_distribution_helper();
-  map<supply_arm_id_t, vector<joule_t>>
-      produce_distribution; // 各个供电臂一天内的产能分布
-  for (const auto &item : produce_map) {
+  // 各个供电臂一个运行图周期内的产能情况
+  map<supply_arm_id_t, vector<joule_t>> produce_distribution;
+  for (const auto &p : produce_map) {
+    supply_arm_id_t curr_arm_id = p.first;
     // 首先插入一个初始化k-v对
     produce_distribution.insert(
-        make_pair(item.first, vector<joule_t>(129600, 0.0)));
-    auto pointer = produce_distribution.find(item.first);
+        make_pair(curr_arm_id, vector<joule_t>(100000, 0.0)));
+    auto finder = produce_distribution.find(curr_arm_id);
     // 然后开始累计能量
-    for (const auto &beg_end_time_pair : item.second) {
-      for (size_t i = beg_end_time_pair.first; i != beg_end_time_pair.second;
-           ++i) {
-        size_t curr_index = i - beg_end_time_pair.first;
-        (pointer->second).at(i) +=
-            produce_vec_.at(curr_index); // 增加produce_vec_.at(curr_index)千焦
-        //        (pointer->second).at(i) += 1.0; // 能量增加1.0焦耳
+    for (const auto &beg_end_time_pair : p.second) {
+      second_t beg_time = beg_end_time_pair.first;
+      second_t end_time = beg_end_time_pair.second;
+      for (size_t i = beg_time; i != end_time; ++i) {
+        size_t curr_index = i - beg_time;
+        // 增加produce_vec_.at(curr_index)千焦
+        (finder->second).at(i) += config_.produce_vec().at(curr_index);
       }
     }
   }
-  return std::move(produce_distribution);
+  return std::make_pair(std::move(consume_distribution),
+                        std::move(produce_distribution));
 }
 
 // 各个供电臂的总能量利用率
 double Timetable::total_reuse_ratio() const {
-  auto energy_produce_distribution = this->energy_produce_distribution();
-  auto energy_consume_distribution = this->energy_consume_distribution();
-
+  auto energy_distribution = this->energy_distribution();
+  const auto &energy_consume_distribution = energy_distribution.first;
+  const auto &energy_produce_distribution = energy_distribution.second;
   double total_produce_energy = 0.0;
   double total_reuse_energy = 0.0;
   for (const auto &consume_kv : energy_consume_distribution) {
@@ -265,78 +239,40 @@ double Timetable::total_reuse_ratio() const {
     const auto &curr_consume_v = consume_kv.second;
     auto finder = energy_produce_distribution.find(curr_supply_arm);
     const auto &curr_produce_v = finder->second;
-
     // 当前供电臂的总产能
-    //    double curr_arm_produce_energy =
-    //        accumulate(curr_produce_v.begin(), curr_produce_v.end(), 0.0);
     double curr_arm_produce_energy = 0.0;
     // 当前供电臂重利用的能量
     double curr_arm_reuse_energy = 0.0;
     for (size_t i = 0; i != curr_produce_v.size(); ++i) {
       // 总产能
       curr_arm_produce_energy += curr_produce_v[i];
-      // 产能-用能的差值
-      double produce_minus_consume = curr_produce_v[i] - curr_consume_v[i];
+      // 再利用的能量
       curr_arm_reuse_energy +=
-          (produce_minus_consume > 0 ? produce_minus_consume : 0.0);
+          (curr_produce_v[i] > curr_consume_v[i] ? curr_consume_v.at(i)
+                                                 : curr_produce_v.at(i));
     }
     // 将计算结果累计
     total_produce_energy += curr_arm_produce_energy;
     total_reuse_energy += curr_arm_reuse_energy;
   }
-  //  cout << "总产能: " << total_produce_energy
-  //       << " 总重利用: " << total_reuse_energy << endl;
   return total_reuse_energy / total_produce_energy;
 }
 
-map<Timetable::supply_arm_id_t, double> Timetable::reuse_ratio() const {
-  auto energy_produce_distribution = this->energy_produce_distribution();
-  auto energy_consume_distribution = this->energy_consume_distribution();
-
-  // 分别计算各个供电臂的能量利用率
-  map<supply_arm_id_t, double> reuse_ratio;
-  for (const auto &consume_kv : energy_consume_distribution) {
-    auto curr_supply_arm = consume_kv.first;
-    auto curr_consume_v = consume_kv.second;
-    //        cout << "当前处理供电臂: " << curr_supply_arm << endl;
-    auto finder = energy_produce_distribution.find(curr_supply_arm);
-    auto curr_produce_v = finder->second;
-
-    // 当前供电臂总产能
-    double total_produce_energy =
-        accumulate(curr_produce_v.begin(), curr_produce_v.end(), 0.0);
-
-    // 当前供电臂利用上的能量
-    double reuse_energy = 0.0;
-    for (size_t i = 0; i != curr_produce_v.size(); ++i) {
-      // 产能-用能的差值
-      double produce_minus_consume = curr_produce_v[i] - curr_consume_v[i];
-      reuse_energy += (produce_minus_consume > 0 ? produce_minus_consume : 0.0);
-    }
-
-    // 利用率
-    //    cout << "供电臂: " << curr_supply_arm << " 总产能: " <<
-    //    total_produce_energy
-    //         << " 重利用: " << reuse_energy << endl;
-    double ratio = reuse_energy / total_produce_energy;
-    reuse_ratio.insert(make_pair(curr_supply_arm, ratio));
-  }
-  return reuse_ratio;
-}
-
-void Timetable::output_consume_distribution(
-    const string &output_dir_path) const {
-  auto energy_consume_distribution = this->energy_consume_distribution();
+void Timetable::output_energy_distribution(std::string pre_name) const {
+  auto energy_distribution = this->energy_distribution();
+  const auto &energy_consume_distribution = energy_distribution.first;
+  const auto &energy_produce_distribution = energy_distribution.second;
+  // 输出用能曲线
   for (const auto &kv : energy_consume_distribution) {
-    string supply_arm_id = to_string(kv.first);
-    string out_file_path;
-    out_file_path.append(output_dir_path);
-    out_file_path.append("consume_supply_");
-    out_file_path.append(supply_arm_id);
-    out_file_path.append("_.txt");
-    ofstream of(out_file_path, ofstream::out);
+    supply_arm_id_t curr_arm_id = kv.first;
+    string curr_arm_id_str = to_string(curr_arm_id);
+    string out_file_name(pre_name + "-");
+    out_file_name.append("consume-supply-id-");
+    out_file_name.append(curr_arm_id_str);
+    out_file_name.append(".txt");
+    ofstream of(out_file_name, std::ios::out);
     if (!of.is_open()) {
-      cout << "打开文件" << out_file_path << "失败! " << endl;
+      cout << "打开文件[" << out_file_name << "]失败! " << endl;
     }
 
     for (const auto &item : kv.second) {
@@ -344,20 +280,17 @@ void Timetable::output_consume_distribution(
     }
     of.close();
   }
-}
-void Timetable::output_produce_distribution(
-    const string &output_dir_path) const {
-  auto energy_produce_distribution = this->energy_produce_distribution();
+  // 输出产能曲线
   for (const auto &kv : energy_produce_distribution) {
-    string supply_arm_id = to_string(kv.first);
-    string out_file_path;
-    out_file_path.append(output_dir_path);
-    out_file_path.append("produce_supply_");
-    out_file_path.append(supply_arm_id);
-    out_file_path.append("_.txt");
-    ofstream of(out_file_path, ofstream::out);
+    supply_arm_id_t curr_arm_id = kv.first;
+    string curr_arm_id_str = to_string(curr_arm_id);
+    string out_file_name(pre_name + "-");
+    out_file_name.append("produce-supply-id-");
+    out_file_name.append(curr_arm_id_str);
+    out_file_name.append(".txt");
+    ofstream of(out_file_name, std::ios::out);
     if (!of.is_open()) {
-      cout << "打开文件" << out_file_path << "失败! " << endl;
+      cout << "打开文件[" << out_file_name << "]失败! " << endl;
     }
 
     for (const auto &item : kv.second) {
@@ -367,7 +300,7 @@ void Timetable::output_produce_distribution(
   }
 }
 
-void Timetable::write_to_file() const {
+void Timetable::write_to_file(std::string pre_name) const {
   json timetable_j;
   timetable_j["timetable_id"] = timetable_id_;
 
@@ -424,7 +357,7 @@ void Timetable::write_to_file() const {
 
   // 输出到文件
   string output_str = timetable_j.dump(2); // 两个空格缩进
-  ofstream of("./timetable.json", fstream::out);
+  ofstream of(pre_name + "-timetable.json", fstream::out);
   if (!of.is_open()) {
     cout << "打开文件[timetable.json]失败! " << endl;
   }
@@ -432,410 +365,25 @@ void Timetable::write_to_file() const {
   of.close();
 }
 
-} // namespace yaohui
+void Timetable::output_plot_data(std::string pre_name) const {
+  // 运行图画图数据输出到文件
+  auto plot_info = this->get_plot_data();
+  // 输出到文件
+  stringstream out_ss;
+  for (const auto &m : plot_info) {
+    for (size_t i = 0; i != m.size(); ++i) {
+      out_ss << m[i].first << "," << m[i].second;
+      if (i != m.size() - 1) {
+        out_ss << ",";
+      }
+    }
+    out_ss << "\n";
+  }
 
-//{
-//  "timetable_id":0,
-//      "missions":[
-//        {
-//          "mission_id":0,
-//          "is_down_direction":"true",
-//          "stations_seq":[
-//            {
-//              "station_id":0,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":1,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":2,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":3,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//          ],
-//          "intervals_seq":[
-//            {
-//              "interval_id":0,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":1,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":2,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":3,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//          ]
-//        },
-//        {
-//          "mission_id":0,
-//          "is_down_direction":"true",
-//          "stations_seq":[
-//            {
-//              "station_id":0,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":1,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":2,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":3,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//          ],
-//          "intervals_seq":[
-//            {
-//              "interval_id":0,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":1,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":2,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":3,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//          ]
-//        },
-//        {
-//          "mission_id":0,
-//          "is_down_direction":"true",
-//          "stations_seq":[
-//            {
-//              "station_id":0,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":1,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":2,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":3,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//          ],
-//          "intervals_seq":[
-//            {
-//              "interval_id":0,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":1,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":2,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":3,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//          ]
-//        },
-//        {
-//          "mission_id":0,
-//          "is_down_direction":"true",
-//          "stations_seq":[
-//            {
-//              "station_id":0,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":1,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":2,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":3,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//          ],
-//          "intervals_seq":[
-//            {
-//              "interval_id":0,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":1,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":2,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":3,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//          ]
-//        },
-//        {
-//          "mission_id":0,
-//          "is_down_direction":"true",
-//          "stations_seq":[
-//            {
-//              "station_id":0,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":1,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":2,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//            {
-//              "station_id":3,
-//              "supply_arm_id":0,
-//              "produce_begin_time":132,
-//              "arrive_time":765,
-//              "departure_time":13214,
-//              "consume_end_time":,54334
-//              "stop_duration":412376783
-//            },
-//          ],
-//          "intervals_seq":[
-//            {
-//              "interval_id":0,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":1,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":2,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//            {
-//              "interval_id":3,
-//              "consume_supply_arm_id":3,
-//              "consume_beg_time":123142,
-//              "consume_end_time":812537812,
-//              "produce_supply_arm_id":3,
-//              "produce_begin_time":8125738,
-//              "produce_end_time":2167378
-//            },
-//          ]
-//        }
-//      ]
-//}
+  fstream out_file;
+  out_file.open(pre_name + "-timetable-plot-data.txt", ios::out);
+  out_file << out_ss.str();
+  out_file.close();
+}
+
+} // namespace yaohui

@@ -1,20 +1,12 @@
 #ifndef YAOHUI_MASTER_THESIS_INTERVAL_HPP
 #define YAOHUI_MASTER_THESIS_INTERVAL_HPP
 
+#include "BaseDef.hpp"
 #include <climits>
-#include <cstdint>
-#include <utility>
 
 namespace yaohui {
 
 class Interval {
-private:
-  using station_id_t = int32_t; // 车站索引类型
-  using interval_id_t =
-      std::pair<station_id_t, station_id_t>; // 行车区间索引类型
-  using supply_arm_id_t = int32_t;           // 供电臂索引类型
-  using mission_id_t = int32_t; // 运输任务(运行线)索引类型
-  using second_t = int32_t;     // "秒"类型
 
 private:
   interval_id_t interval_id_ =
@@ -40,17 +32,25 @@ public:
    */
   Interval(interval_id_t id, supply_arm_id_t cons_arm, second_t cons_beg,
            second_t cons_end, supply_arm_id_t prod_arm, second_t prod_beg,
-           second_t prod_end);
+           second_t prod_end)
+      : interval_id_(std::move(id)), consume_supply_arm_id_(cons_arm),
+        consume_beg_time_(cons_beg), consume_end_time_(cons_end),
+        produce_supply_arm_id_(prod_arm), produce_begin_time_(prod_beg),
+        produce_end_time_(prod_end) {}
   Interval() = delete;
 
-  station_id_t interval_id_first() const;
-  station_id_t interval_id_second() const;
-  supply_arm_id_t consume_supply_arm_id() const;
-  supply_arm_id_t produce_supply_arm_id() const;
-  second_t consume_beg_time() const;
-  second_t consume_end_time() const;
-  second_t produce_begin_time() const;
-  second_t produce_end_time() const;
+  station_id_t interval_id_first() const { return interval_id_.first; }
+  station_id_t interval_id_second() const { return interval_id_.second; }
+  supply_arm_id_t consume_supply_arm_id() const {
+    return consume_supply_arm_id_;
+  }
+  supply_arm_id_t produce_supply_arm_id() const {
+    return produce_supply_arm_id_;
+  }
+  second_t consume_beg_time() const { return consume_beg_time_; }
+  second_t consume_end_time() const { return consume_end_time_; }
+  second_t produce_begin_time() const { return produce_begin_time_; }
+  second_t produce_end_time() const { return produce_end_time_; }
 };
 
 } // namespace yaohui

@@ -111,17 +111,4 @@ std::map<double, double> TractionCalculator::brake_stage_W(double tm) const {
   return std::move(W_map);
 }
 
-// void TractionCalculator::init_train_m() {
-//   cout<<passenger_capacity_<<endl;
-//   cout<<passenger_m_avg_<<endl;
-//   cout<<MCP_cnt_<<endl;
-//   cout<<MCP_m_<<endl;
-//   cout<<T_cnt<<endl;
-//   cout<<T_m_<<endl;
-//   train_m_ =
-//       passenger_capacity_ * passenger_m_avg_ + MCP_cnt_ * MCP_m_ + T_cnt *
-//       T_m_;
-//   cout << train_m_ << endl;
-// }
-
 } // namespace yaohui
