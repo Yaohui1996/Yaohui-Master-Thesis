@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <string>
 #include <vector>
 
 #include "TractionCalculator.hpp"
@@ -72,7 +73,7 @@ int main() {
   }
   // 写入数据
   for (const auto &p : W_brake_map) {
-    of << to_string(15.0-p.first) << "," << to_string(p.second) << "\n";
+    of << to_string(15.0 - p.first) << "," << to_string(p.second) << "\n";
   }
   of.close();
   // 输出用能关系曲线(按秒)
@@ -85,7 +86,6 @@ int main() {
     of << to_string(item) << "\n";
   }
   of.close();
-
 
   return 0;
 }
