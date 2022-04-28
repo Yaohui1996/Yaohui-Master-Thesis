@@ -32,6 +32,7 @@ public:
   const TimetableConfig &timetable_config() const;
   TimetableConfig &timetable_config();
   void update_score();
+  std::vector<double> random_walk(size_t k);
 };
 
 } // namespace yaohui

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(YH-Master-Thesis VERSION 1.1)
+project(YH-Master-Thesis VERSION 1.2)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -14,7 +14,8 @@ add_executable(YH-Master-Thesis
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Timetable.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/TimetableConfig.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Individual.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/Solver.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Solver.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/RandomWalk.cpp)
 
 # 列车牵引计算
 add_executable(TrainTractionCalculation

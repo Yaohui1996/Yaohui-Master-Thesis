@@ -9,9 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "Interval.hpp"
 #include "Mission.hpp"
-#include "Station.hpp"
 #include "TimetableConfig.hpp"
 
 namespace yaohui {
@@ -37,9 +35,9 @@ public:
   // 输出能量分布曲线
   void output_energy_distribution(std::string pre_name) const;
   // 将运行图写至json文件
-  void write_to_file(std::string pre_name) const;
+  void write_to_file(std::string json_name="timetable.json") const;
   // 输出运行图画图数据
-  void output_plot_data(std::string pre_name) const;
+  void output_plot_data(std::string f_name = "timetable-plot-data.csv") const;
 
 private:
   std::vector<Station> make_down_stations_vec(size_t down_id);

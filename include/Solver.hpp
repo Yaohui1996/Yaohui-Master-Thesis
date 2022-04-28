@@ -28,6 +28,7 @@ private:
   std::vector<double> max_fitness_vec_; // 每代最大的适应度构成的数组
   std::vector<double> min_fitness_vec_; // 每代最小适应度构成的数组
   std::vector<double> avg_fitness_vec_; // 每代平均适应度构成的数组
+  std::vector<std::vector<double>> fitness_vec_; // 每代所有适应度
 public:
   Solver() = delete;                          // 默认构造
   Solver(const Solver &) = delete;            // 拷贝构造
@@ -40,7 +41,7 @@ public:
   const Individual &individual_before_optimize() const;
   const Individual &individual_after_optimize() const;
   void do_optimization();
-  void output_optimization_result(std::string file_name);
+  void output_optimization_result(std::string f_name = "processing-data.csv");
 
 private:
   static bool is_better(const Individual &lhs, const Individual &rhs);

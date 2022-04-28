@@ -10,6 +10,12 @@ Solver::Solver(size_t gene_cnt, size_t population_cnt, double cross_p,
   init_population(); // 生成初始种群并按适应度由大到小排列
   first_best_individual_ = population_.front();
   last_best_individual_ = population_.front();
+
+  // 把第一代适应度添加到fitness_vec
+  fitness_vec_.emplace_back(std::vector<double>(population_.size(), 0.0));
+  for (size_t i = 0; i != population_.size(); ++i) {
+    fitness_vec_.back().at(i) = population_.at(i).score();
+  }
 }
 
 const Individual &Solver::individual_before_optimize() const {
@@ -31,6 +37,15 @@ void Solver::init_weights() {
 }
 
 void Solver::do_optimization() {
+  std::cout << "The number of missions: "
+            << population_.front().timetable_config().missions_cnt()
+            << std::endl;
+  std::cout << "The number of down direction missions: "
+            << population_.front().timetable_config().down_missions_cnt()
+            << std::endl;
+  std::cout << "The number of up direction missions: "
+            << population_.front().timetable_config().up_missions_cnt()
+            << std::endl;
   {
     for (size_t loop_times = 0; loop_times != gene_cnt_; ++loop_times) {
       // 按照适应度选择个体并进行交叉生成子代
@@ -54,18 +69,22 @@ void Solver::do_optimization() {
       // 保存最优解
       last_best_individual_ = population_.front();
 
+      fitness_vec_.emplace_back(std::vector<double>(population_.size(), 0.0));
+      for (size_t i = 0; i != population_.size(); ++i) {
+        fitness_vec_.back().at(i) = population_.at(i).score();
+      }
       // 输出
-      std::cout << "当前进化代数: " << loop_times
-                << "\t最好的适应度为: " << max_fitness_vec_.back()
-                << "\t最差的适应度为: " << min_fitness_vec_.back()
-                << "\t平均适应度为: " << avg_fitness_vec_.back() << std::endl;
+      std::cout << "Iteration number: " << loop_times
+                << "\tBest: " << max_fitness_vec_.back()
+                << "\tWorst: " << min_fitness_vec_.back()
+                << "\tAverage: " << avg_fitness_vec_.back() << std::endl;
     }
 
-    std::cout << "优化完毕!" << std::endl;
+    std::cout << "optimization finished!" << std::endl;
   }
 }
 
-void Solver::output_optimization_result(std::string file_name) {
+void Solver::output_optimization_result(std::string f_name) {
   std::vector<std::string> lines = {
       "generation,best_fitness,worst_fitness,avg_fitness\n"};
   for (size_t i = 0; i != gene_cnt_; ++i) {
@@ -75,17 +94,36 @@ void Solver::output_optimization_result(std::string file_name) {
                     std::to_string(avg_fitness_vec_.at(i)) + "\n");
   }
 
-  // 进化过程画图用迭代数据写入文件
+  // 进化过程画图用迭代数据写入文件(只有最好的个体的版本)
   std::ofstream plot_data_output;
-  plot_data_output.open(file_name, std::ios::out);
+  std::string old_s = "only-best-" + f_name;
+  plot_data_output.open(old_s, std::ios::out);
   if (!plot_data_output.is_open()) {
-    std::cout << "打开文件失败! [file=进化过程画图数据.csv]" << std::endl;
+    std::cout << "Failed to open [" << old_s << "] !" << std::endl;
   }
   for (const auto &line : lines) {
     plot_data_output << line;
   }
   plot_data_output.close();
-  std::cout << "保存成功!" << std::endl;
+  std::cout << "Save file [" << old_s << "] successful!" << std::endl;
+
+  // 进化过程画图用迭代数据写入文件(完整版本)
+  std::ofstream iter_data;
+  iter_data.open(f_name, std::ios::out);
+  if (!iter_data.is_open()) {
+    std::cout << "Failed to open [" << f_name << "] !" << std::endl;
+  }
+  for (const auto &r : fitness_vec_) {
+    for (size_t j = 0; j != r.size(); ++j) {
+      iter_data << std::to_string(r.at(j));
+      if (j != r.size() - 1) {
+        iter_data << ",";
+      }
+    }
+    iter_data << "\n";
+  }
+  iter_data.close();
+  std::cout << "Save file [" << f_name << "] successful!" << std::endl;
 }
 
 // 生成初始种群
@@ -324,7 +362,7 @@ void Solver::child_mutate(Individual &child) const {
         -oft, oyt);
     second_t r2 = up_departure_mutate_offset_u(up_departure_mutate_offset_e);
     // 更新di
-    down_de_vec.at(i) += r2;
+    up_de_vec.at(i) += r2;
   }
 
   // down stop

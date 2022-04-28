@@ -266,41 +266,43 @@ void Timetable::output_energy_distribution(std::string pre_name) const {
   for (const auto &kv : energy_consume_distribution) {
     supply_arm_id_t curr_arm_id = kv.first;
     string curr_arm_id_str = to_string(curr_arm_id);
-    string out_file_name(pre_name + "-");
+    string out_file_name = pre_name + "-";
     out_file_name.append("consume-supply-id-");
     out_file_name.append(curr_arm_id_str);
-    out_file_name.append(".txt");
+    out_file_name.append(".csv");
     ofstream of(out_file_name, std::ios::out);
     if (!of.is_open()) {
-      cout << "打开文件[" << out_file_name << "]失败! " << endl;
+      std::cout << "Failed to open [" << out_file_name << "] !" << std::endl;
     }
 
     for (const auto &item : kv.second) {
       of << to_string(item) << "\n";
     }
     of.close();
+    std::cout << "Save file [" << out_file_name << "] successful!" << std::endl;
   }
   // 输出产能曲线
   for (const auto &kv : energy_produce_distribution) {
     supply_arm_id_t curr_arm_id = kv.first;
     string curr_arm_id_str = to_string(curr_arm_id);
-    string out_file_name(pre_name + "-");
+    string out_file_name = pre_name + "-";
     out_file_name.append("produce-supply-id-");
     out_file_name.append(curr_arm_id_str);
-    out_file_name.append(".txt");
+    out_file_name.append(".csv");
     ofstream of(out_file_name, std::ios::out);
     if (!of.is_open()) {
-      cout << "打开文件[" << out_file_name << "]失败! " << endl;
+      std::cout << "Failed to open [" << out_file_name << "] !" << std::endl;
     }
 
     for (const auto &item : kv.second) {
       of << to_string(item) << "\n";
     }
     of.close();
+    std::cout << "Save file [" << out_file_name << "] successful!" << std::endl;
   }
 }
 
-void Timetable::write_to_file(std::string pre_name) const {
+void Timetable::write_to_file(std::string json_name) const {
   json timetable_j;
   timetable_j["timetable_id"] = timetable_id_;
 
@@ -357,15 +359,16 @@ void Timetable::write_to_file(std::string pre_name) const {
 
   // 输出到文件
   string output_str = timetable_j.dump(2); // 两个空格缩进
-  ofstream of(pre_name + "-timetable.json", fstream::out);
+  ofstream of(json_name, fstream::out);
   if (!of.is_open()) {
-    cout << "打开文件[timetable.json]失败! " << endl;
+    std::cout << "Failed to open [" << json_name << "] !" << std::endl;
   }
   of << output_str;
   of.close();
+  std::cout << "Save file [" << json_name << "] successful!" << std::endl;
 }
 
-void Timetable::output_plot_data(std::string pre_name) const {
+void Timetable::output_plot_data(std::string f_name) const {
   // 运行图画图数据输出到文件
   auto plot_info = this->get_plot_data();
   // 输出到文件
@@ -381,9 +384,13 @@ void Timetable::output_plot_data(std::string pre_name) const {
   }
 
   fstream out_file;
-  out_file.open(pre_name + "-timetable-plot-data.txt", ios::out);
+  out_file.open(f_name, ios::out);
+  if (!out_file.is_open()) {
+    std::cout << "Failed to open [" << f_name << "] !" << std::endl;
+  }
   out_file << out_ss.str();
   out_file.close();
+  std::cout << "Save file [" << f_name << "] successful!" << std::endl;
 }
 
 } // namespace yaohui

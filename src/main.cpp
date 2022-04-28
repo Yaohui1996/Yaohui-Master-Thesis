@@ -1,40 +1,62 @@
 #include "Individual.hpp"
+#include "RandomWalk.hpp"
 #include "Solver.hpp"
 #include "Timetable.hpp"
+#include <chrono>
+#include <iostream>
 
 using namespace std;
 using namespace yaohui;
 
 int main() {
   size_t gene_cnt = 200;       // 进化次数
-  size_t population_cnt = 50; // 种群规模
+  size_t population_cnt = 100; // 种群规模
+  double alpha = 0.015;        // 选择参数alpha
   double cross_p = 0.8;        // 交叉概率
   double mutate_p = 0.05;      // 变异概率
-  double alpha = 0.05;         // 选择参数alpha
   size_t thread_cnt = 8;       // 线程数目
 
-  // 构造求解器
+  auto start = std::chrono::system_clock::now();
+  // construct solver
   Solver solver(gene_cnt, population_cnt, cross_p, mutate_p, alpha, thread_cnt);
-  solver.do_optimization();                                  // 求解
-  solver.output_optimization_result("进化过程画图数据.csv"); // 输出到文件
+  solver.do_optimization();
+  auto end = std::chrono::system_clock::now();
+  std::cout << "The cost of time for optimizing timetable: "
+            << std::chrono::duration<double>(end - start).count() << " second."
+            << std::endl;
+  // output processing data
+  solver.output_optimization_result("processing-data.csv"); // output
 
-  Individual unoptimized_individual = solver.individual_before_optimize();
-  Individual optimized_individual = solver.individual_after_optimize();
+  // get best solution
+  Timetable best_solution =
+      Timetable(solver.individual_after_optimize().timetable_config());
 
-  Timetable initial_solution =
-      Timetable(unoptimized_individual.timetable_config());
-  Timetable best_solution = Timetable(optimized_individual.timetable_config());
+  // output the file of energy distribution
+  best_solution.output_energy_distribution("optimized");
 
-  // 输出能量分布曲线
-  best_solution.output_energy_distribution("优化后");
-  initial_solution.output_energy_distribution("优化前");
+  // output the json file of timetable
+  best_solution.write_to_file("optimized-timetable.json");
 
-  // 输出运行图参数
-  best_solution.write_to_file("优化后");
-  initial_solution.write_to_file("优化前");
+  // output plot data of the best timetable
+  best_solution.output_plot_data("best-timetable-plot-data.csv");
 
-  // 输出运行图画图数据
-  initial_solution.output_plot_data("优化前");
-  best_solution.output_plot_data("优化后");
+  // default timetable
+  TimetableConfig tbc;
+  Timetable default_tb(tbc);
+  std::cout << "The reuse ratio of default timetable: "
+            << default_tb.total_reuse_ratio() << std::endl;
+  // output plot data
+  default_tb.output_plot_data("default-timetable-plot-data.csv");
+
+  // random walk
+  start = std::chrono::system_clock::now();
+  RandomWalk rw = RandomWalk(population_cnt, gene_cnt);
+  rw.do_random_walk();
+  end = std::chrono::system_clock::now();
+  std::cout << "The cost of time for random walk: "
+            << std::chrono::duration<double>(end - start).count() << " second."
+            << std::endl;
+  rw.output_process_result("random-walk-process-result.csv");
+  rw.output_plot_data("random-walk-timetable-plot-data.csv");
   return 0;
 }

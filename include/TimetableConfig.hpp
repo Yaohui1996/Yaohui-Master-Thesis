@@ -89,8 +89,8 @@ private:
 
   // 首班车发车时刻(5:30)(包含)(参数)
   // 末班车发车时刻(23:30)(不包含)(参数)
-  second_t first_train_time_ = 39600;
-  second_t last_train_time_ = 57600;
+  second_t first_train_time_ = 61200;
+  second_t last_train_time_ = 68400;
 
   // 用能功率曲线
   P_curve_t consume_vec_ = {

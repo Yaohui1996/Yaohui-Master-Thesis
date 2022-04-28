@@ -105,6 +105,10 @@ TimetableConfig::TimetableConfig() {
 }
 
 void TimetableConfig::init_basic_departure_time_sequence() {
+  //  auto tp_epoch =
+  //  std::chrono::system_clock::now().time_since_epoch().count(); static
+  //  std::default_random_engine d_e(tp_epoch); static
+  //  uniform_int_distribution<second_t> d_u(-30, 30);
   // 下行
   for (second_t curr_time = first_train_time_; curr_time < last_train_time_;) {
     // 将当前遍历到的时刻加入基本发车时刻序列
@@ -118,6 +122,8 @@ void TimetableConfig::init_basic_departure_time_sequence() {
       }
     }
     curr_time += curr_departure_T;
+    //    second_t rrr = d_u(d_e);
+    //    curr_time += rrr;
   }
 
   // 上下行对开

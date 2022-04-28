@@ -18,8 +18,7 @@ using second_t = int32_t;   // "秒"类型
 using joule_t = double;     // 能量类型 (焦耳)
 using kilojoule_t = double; // 能量类型 (千焦)
 
-using ms_plot_data_t =
-    std::vector<std::pair<station_id_t, second_t>>; // 用于画图的运行线数据类型
+using ms_plot_data_t = std::vector<interval_id_t>; // 用于画图的运行线数据类型
 using tb_plot_data_t = std::vector<ms_plot_data_t>; // 用于画图的运行图数据类型
 
 // 下行方向的列车经过的车站的id类型
@@ -40,12 +39,16 @@ using first_departure_time_t = std::vector<second_t>;
 // 各发车时刻发出的列车对应的停站时长序列类型
 using each_stop_duration_t = std::vector<std::map<station_id_t, second_t>>;
 
+// 单供电臂能量关系表
+using single_energy_map_t = std::vector<std::pair<second_t, second_t>>;
 // 能量关系表
-using energy_map_t =
-    std::map<supply_arm_id_t, std::vector<std::pair<second_t, second_t>>>;
+using energy_map_t = std::map<supply_arm_id_t, single_energy_map_t>;
 
+// 单供电臂能量分布曲线
+using single_energy_distribution_t = std::vector<joule_t>;
 // 能量分布曲线
-using energy_distribution_t = std::map<supply_arm_id_t, std::vector<joule_t>>;
+using energy_distribution_t =
+    std::map<supply_arm_id_t, single_energy_distribution_t>;
 
 } // namespace yaohui
 
